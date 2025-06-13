@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "100399807635",
+    "project_id": "app-gestion-financiera-bc323",
+    "storage_bucket": "app-gestion-financiera-bc323.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100399807635:android:35513c4fadf99ae5b16166",
+        "android_client_info": {
+          "package_name": "com.cuenca.appgestionfinanciera"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANC9HAO1R_bKammQkU9ioyIMXAe_am8w4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

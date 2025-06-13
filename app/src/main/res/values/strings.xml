@@ -1,0 +1,37 @@
+<resources>
+    <!-- Nombre de la aplicación -->
+    <string name="app_name">App Gestión Financiera</string>
+
+    <!-- Arrays que usarás en otros fragmentos -->
+    <string-array name="filtro_tipo">
+        <item>Todos</item>
+        <item>Ingreso</item>
+        <item>Gasto</item>
+    </string-array>
+
+    <string-array name="categorias_array">
+        <item>Todas</item>
+        <item>Alimentos</item>
+        <item>Transporte</item>
+        <item>Hogar</item>
+        <item>Salud</item>
+        <item>Entretenimiento</item>
+        <item>Otros</item>
+    </string-array>
+
+    <string-array name="rango_estadisticas">
+        <item>Día</item>
+        <item>Semana</item>
+        <item>Mes</item>
+        <item>Total</item>
+    </string-array>
+
+    <string-array name="rango_periodo">
+        <item>Día</item>
+        <item>Semana</item>
+        <item>Mes</item>
+        <item>Total</item>
+    </string-array>
+
+
+</resources>

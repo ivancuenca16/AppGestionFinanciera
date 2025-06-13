@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Estadísticas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style> body{padding:16px;font-family:sans-serif;} canvas{width:100%;height:300px;} </style>
+</head>
+<body>
+<canvas id="pie"></canvas>
+<script>
+    function renderStats() {
+      const raw = window.statsData.getStatsData();
+      const d   = JSON.parse(raw);
+      new Chart(document.getElementById('pie'), {
+        type:'pie',
+        data:{labels:['Ingresos','Gastos'],datasets:[{data:[d.sumIn,d.sumOut],backgroundColor:['#388E3C','#D32F2F']}]},
+        options:{responsive:true}
+      });
+    }
+</script>
+</body>
+</html>

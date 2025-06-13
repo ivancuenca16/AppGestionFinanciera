@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_estadisticas"
+        android:icon="@drawable/ic_stats"
+        android:title="Estadísticas" />
+
+    <item
+        android:id="@+id/nav_agregar"
+        android:icon="@android:drawable/ic_input_add"
+        android:title="Agregar" />
+
+    <item
+        android:id="@+id/nav_listar"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Home" />
+
+    <item
+        android:id="@+id/nav_periodicos"
+        android:icon="@android:drawable/ic_menu_month"
+        android:title="Periódicos" />
+
+</menu>
