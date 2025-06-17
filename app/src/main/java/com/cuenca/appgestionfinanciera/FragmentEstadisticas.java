@@ -1,19 +1,12 @@
 package com.cuenca.appgestionfinanciera;
 
 import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.*;
 import android.webkit.*;
-import android.widget.AdapterView;
-import android.widget.Spinner;
-
 import androidx.annotation.*;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.database.*;
-
 import org.json.*;
 
 import java.text.SimpleDateFormat;
@@ -22,12 +15,9 @@ import java.util.*;
 public class FragmentEstadisticas extends Fragment {
 
     private WebView webView;
-    private Spinner spinnerRango;
     private DatabaseReference transRef;
     private List<Transaction> allTransactions = new ArrayList<>();
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-
-    public FragmentEstadisticas() { }
 
     @Nullable
     @Override
@@ -36,23 +26,22 @@ public class FragmentEstadisticas extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_estadisticas, container, false);
 
-        spinnerRango = v.findViewById(R.id.spinnerRango);
-        webView      = v.findViewById(R.id.webviewStats);
-
-        // Configurar WebView
-        WebSettings ws = webView.getSettings();
-        ws.setJavaScriptEnabled(true);
-        webView.setWebViewClient(new WebViewClient() {
+        webView = v.findViewById(R.id.webviewStats);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.setWebViewClient(new WebViewClient(){
             @Override public void onPageFinished(WebView view, String url) {
-                render();  // dibuja al cargar
+                webView.evaluateJavascript("renderCharts();", null);
             }
         });
-        webView.addJavascriptInterface(new Object() {
+
+        // Exponer getStatsData() a JS
+        webView.addJavascriptInterface(new Object(){
             @JavascriptInterface
             public String getStatsData() {
-                return buildStatsJson(spinnerRango.getSelectedItemPosition());
+                return buildStatsJson();
             }
         }, "statsData");
+
         webView.loadUrl("file:///android_asset/estadisticas.html");
 
         // Firebase → transactions/{userId}
@@ -63,73 +52,77 @@ public class FragmentEstadisticas extends Fragment {
         transRef.addValueEventListener(new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot snap) {
                 allTransactions.clear();
-                for (DataSnapshot ds: snap.getChildren()) {
+                for (DataSnapshot ds : snap.getChildren()) {
                     Transaction tx = ds.getValue(Transaction.class);
                     if (tx != null) allTransactions.add(tx);
                 }
-                render();
+                // Refrescar gráfico
+                webView.post(() -> webView.evaluateJavascript("renderCharts();", null));
             }
             @Override public void onCancelled(@NonNull DatabaseError e) { }
-        });
-
-        // Al cambiar rango, recarga gráficos
-        spinnerRango.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> a, View v, int p, long id) {
-                render();
-            }
-            @Override public void onNothingSelected(AdapterView<?> a) {}
         });
 
         return v;
     }
 
-    private void render() {
-        webView.post(() ->
-                webView.evaluateJavascript("renderStats();", null)
-        );
-    }
-
     /**
-     * Crea el JSON según el rango:
-     * 0=Día,1=Semana,2=Mes,3=Total
+     * JSON con:
+     *  - sumIn7, sumOut7: ingresos/gastos últimos 7 días
+     *  - labels (["Mar","Abr","May","Jun"]) y savings ([...]) para la barra
      */
-    private String buildStatsJson(int rango) {
-        float sumIn=0, sumOut=0;
+    private String buildStatsJson() {
         Calendar now = Calendar.getInstance();
-        for (Transaction tx: allTransactions) {
-            // filtrado según rango
-            try {
-                Calendar c = Calendar.getInstance();
-                c.setTime(sdf.parse(tx.fecha));
-                boolean include=false;
-                switch(rango) {
-                    case 0: // hoy
-                        include = now.get(Calendar.YEAR)==c.get(Calendar.YEAR)
-                                && now.get(Calendar.DAY_OF_YEAR)==c.get(Calendar.DAY_OF_YEAR);
-                        break;
-                    case 1: // últimos 7 días
-                        long diff = now.getTimeInMillis()-c.getTimeInMillis();
-                        include = diff >=0 && diff < 1000L*60*60*24*7;
-                        break;
-                    case 2: // mismo mes/año
-                        include = now.get(Calendar.YEAR)==c.get(Calendar.YEAR)
-                                && now.get(Calendar.MONTH)==c.get(Calendar.MONTH);
-                        break;
-                    case 3: // todo
-                        include = true;
-                        break;
-                }
-                if (!include) continue;
-            } catch (Exception e){ continue; }
+        long cutoff = now.getTimeInMillis() - 7L*24*60*60*1000;
 
-            if ("ingreso".equalsIgnoreCase(tx.tipo)) sumIn += tx.importe;
-            else sumOut += tx.importe;
+        double sumIn7 = 0, sumOut7 = 0;
+        // datos de ahorro mensual
+        int year = now.get(Calendar.YEAR);
+        int[] meses = {Calendar.MARCH, Calendar.APRIL, Calendar.MAY, Calendar.JUNE};
+        String[] labels = {"Mar","Abr","May","Jun"};
+        double[] savings = new double[labels.length];
+
+        for (Transaction tx : allTransactions) {
+            try {
+                Date d = sdf.parse(tx.fecha);
+                Calendar c = Calendar.getInstance();
+                c.setTime(d);
+                boolean isIngreso = "ingreso".equalsIgnoreCase(tx.tipo);
+
+                // Últimos 7 días para el pie
+                if (d.getTime() >= cutoff) {
+                    if (isIngreso) sumIn7 += tx.importe;
+                    else sumOut7 += tx.importe;
+                }
+
+                // Ahorro por mes (si es este año)
+                if (c.get(Calendar.YEAR) == year) {
+                    for (int i = 0; i < meses.length; i++) {
+                        if (c.get(Calendar.MONTH) == meses[i]) {
+                            savings[i] += isIngreso ? tx.importe : -tx.importe;
+                        }
+                    }
+                }
+
+            } catch (Exception ignored) {}
         }
-        JSONObject o = new JSONObject();
+
         try {
-            o.put("sumIn", sumIn);
-            o.put("sumOut", sumOut);
-        } catch (JSONException ignored){}
-        return o.toString();
+            JSONObject root = new JSONObject();
+            // Pie últimos 7 días
+            root.put("sumIn7", sumIn7);
+            root.put("sumOut7", sumOut7);
+            // Barra mensual
+            JSONArray jLabels = new JSONArray();
+            for (String l : labels) jLabels.put(l);
+            root.put("labels", jLabels);
+            JSONArray jSav = new JSONArray();
+            for (double v : savings) jSav.put(v);
+            root.put("savings", jSav);
+
+            return root.toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return "{}";
+        }
     }
 }

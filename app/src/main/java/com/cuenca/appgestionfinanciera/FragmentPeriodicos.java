@@ -18,12 +18,16 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 
 /**
- * Muestra solo los movimientos cuya fecha sea estrictamente posterior a hoy.
+ * Muestra solo los movimientos con fecha > hoy.
  */
 public class FragmentPeriodicos extends Fragment {
 
@@ -32,6 +36,8 @@ public class FragmentPeriodicos extends Fragment {
     private List<Transaction> futureList = new ArrayList<>();
     private DatabaseReference transRef;
     private SimpleDateFormat sdf;
+
+    public FragmentPeriodicos() { }
 
     @Nullable
     @Override
@@ -51,21 +57,25 @@ public class FragmentPeriodicos extends Fragment {
         // 2) RecyclerView setup
         rvPeriodicos = view.findViewById(R.id.rvPeriodicos);
         rvPeriodicos.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new TransactionAdapter(futureList);
+        // <-- Aquí pasamos el Context y la lista
+        adapter = new TransactionAdapter(requireContext(), futureList);
         rvPeriodicos.setAdapter(adapter);
 
+        // 3) Formatter de fecha
         sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
+        // 4) Referencia a /transactions/{userId}
         transRef = FirebaseDatabase.getInstance()
                 .getReference("transactions")
                 .child(userId);
 
+        // 5) Listener para cargar solo futuras (fecha > hoy)
         transRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 futureList.clear();
 
-                // Calendario al inicio de mañana
+                // Definir mañana a 00:00
                 Calendar tomorrow = Calendar.getInstance();
                 tomorrow.set(Calendar.HOUR_OF_DAY, 0);
                 tomorrow.set(Calendar.MINUTE, 0);
@@ -77,22 +87,17 @@ public class FragmentPeriodicos extends Fragment {
                     Transaction tx = ds.getValue(Transaction.class);
                     if (tx == null) continue;
                     try {
-                        Date d = sdf.parse(tx.fecha);
-                        Calendar c = Calendar.getInstance();
-                        c.setTime(d);
-                        // Incluir solo si fecha >= mañana
-                        if (!c.before(tomorrow)) {
+                        if (sdf.parse(tx.fecha).getTime() >= tomorrow.getTimeInMillis()) {
                             futureList.add(tx);
                         }
-                    } catch (ParseException e) {
-                        // Si falla el parseo, la añadimos por seguridad
+                    } catch (Exception e) {
                         futureList.add(tx);
                     }
                 }
 
-                // Ordena ascendente por fecha
+                // Ordenar y notificar
                 Collections.sort(futureList, Comparator.comparing(t -> t.fecha));
-                adapter.updateList(futureList);
+                adapter.notifyDataSetChanged();
             }
 
             @Override

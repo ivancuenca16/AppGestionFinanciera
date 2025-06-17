@@ -1,6 +1,6 @@
 <resources>
     <!-- Nombre de la aplicación -->
-    <string name="app_name">App Gestión Financiera</string>
+    <string name="app_name">FinanApp</string>
 
     <!-- Arrays que usarás en otros fragmentos -->
     <string-array name="filtro_tipo">

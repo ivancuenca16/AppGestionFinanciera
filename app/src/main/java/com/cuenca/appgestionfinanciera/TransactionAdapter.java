@@ -1,98 +1,99 @@
 package com.cuenca.appgestionfinanciera;
 
+import android.content.Context;
+import android.widget.Toast;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.text.NumberFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.util.List;
 import java.util.Locale;
 
 public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHolder> {
 
-    private List<Transaction> transactionList;
-    private SimpleDateFormat sdfFrom = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-    private SimpleDateFormat sdfTo   = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-    private NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(Locale.getDefault());
+    private final Context context;
+    private final List<Transaction> transactionList;
 
-    public TransactionAdapter(List<Transaction> transactionList) {
-        this.transactionList = transactionList;
+    public TransactionAdapter(Context context, List<Transaction> list) {
+        this.context = context;
+        this.transactionList = list;
     }
 
-    @Override
+    /**
+     * Actualiza la lista mostrada y refresca el RecyclerView.
+     */
+    public void updateList(List<Transaction> newList) {
+        transactionList.clear();
+        transactionList.addAll(newList);
+        notifyDataSetChanged();
+    }
+
     @NonNull
+    @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
+        View v = LayoutInflater.from(context)
                 .inflate(R.layout.item_transaccion, parent, false);
-        return new ViewHolder(view);
+        return new ViewHolder(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Transaction tx = transactionList.get(position);
-
-        // 1) Categoría
         holder.tvCategoria.setText(tx.categoria);
+        holder.tvDescripcion.setText(tx.descripcion == null ? "" : tx.descripcion);
+        holder.tvFecha.setText(tx.fecha);
+        String sign = tx.tipo.equalsIgnoreCase("ingreso") ? "+ " : "- ";
+        holder.tvImporte.setText(String.format(Locale.getDefault(), "%s€ %.2f", sign, tx.importe));
+        int color = tx.tipo.equalsIgnoreCase("ingreso")
+                ? context.getColor(R.color.green)
+                : context.getColor(R.color.red);
+        holder.tvImporte.setTextColor(color);
 
-        // 2) Fecha: transformar de “yyyy-MM-dd” a “dd/MM/yyyy”
-        try {
-            String fechaFormateada = sdfTo.format(sdfFrom.parse(tx.fecha));
-            holder.tvFecha.setText(fechaFormateada);
-        } catch (ParseException e) {
-            holder.tvFecha.setText(tx.fecha);
-        }
-
-        // 3) Descripción (si está vacía, ocultar el TextView)
-        if (tx.descripcion == null || tx.descripcion.trim().isEmpty()) {
-            holder.tvDescripcion.setVisibility(View.GONE);
-        } else {
-            holder.tvDescripcion.setVisibility(View.VISIBLE);
-            holder.tvDescripcion.setText(tx.descripcion);
-        }
-
-        // 4) Importe: con signo y color según tipo
-        String importeStr = currencyFormatter.format(tx.importe);
-        if ("ingreso".equalsIgnoreCase(tx.tipo)) {
-            holder.tvImporte.setText("+ " + importeStr);
-            holder.tvImporte.setTextColor(holder.itemView.getResources().getColor(R.color.green));
-            holder.indicadorTipo.setBackgroundTintList(
-                    holder.itemView.getResources().getColorStateList(R.color.green));
-        } else {
-            holder.tvImporte.setText("- " + importeStr);
-            holder.tvImporte.setTextColor(holder.itemView.getResources().getColor(R.color.red));
-            holder.indicadorTipo.setBackgroundTintList(
-                    holder.itemView.getResources().getColorStateList(R.color.red));
-        }
+        holder.ivDelete.setOnClickListener(v -> {
+            int adapterPosition = holder.getAdapterPosition();
+            if (adapterPosition == RecyclerView.NO_POSITION) return;
+            Transaction txToDelete = transactionList.get(adapterPosition);
+            String userId = SessionManager.getUserId(context);
+            DatabaseReference ref = FirebaseDatabase.getInstance()
+                    .getReference("transactions")
+                    .child(userId)
+                    .child(txToDelete.id);
+            ref.removeValue()
+                    .addOnSuccessListener(aVoid -> {
+                        transactionList.remove(adapterPosition);
+                        notifyItemRemoved(adapterPosition);
+                        notifyItemRangeChanged(adapterPosition, transactionList.size());
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(context,
+                            "Error al eliminar: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show());
+        });
     }
 
     @Override
     public int getItemCount() {
-        return transactionList != null ? transactionList.size() : 0;
-    }
-
-    // Actualiza la lista (se dará en FragmentLista cada vez que cambien los filtros)
-    public void updateList(List<Transaction> nuevaLista) {
-        this.transactionList = nuevaLista;
-        notifyDataSetChanged();
+        return transactionList.size();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        View indicadorTipo;
-        TextView tvCategoria, tvFecha, tvDescripcion, tvImporte;
+        TextView tvCategoria, tvDescripcion, tvFecha, tvImporte;
+        ImageView ivDelete;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
-            indicadorTipo   = itemView.findViewById(R.id.viewTipoIndicador);
-            tvCategoria     = itemView.findViewById(R.id.tvCategoriaItem);
-            tvFecha         = itemView.findViewById(R.id.tvFechaItem);
-            tvDescripcion   = itemView.findViewById(R.id.tvDescripcionItem);
-            tvImporte       = itemView.findViewById(R.id.tvImporteItem);
+            tvCategoria = itemView.findViewById(R.id.tvCategoriaItem);
+            tvDescripcion = itemView.findViewById(R.id.tvDescripcionItem);
+            tvFecha = itemView.findViewById(R.id.tvFechaItem);
+            tvImporte = itemView.findViewById(R.id.tvImporteItem);
+            ivDelete = itemView.findViewById(R.id.ivDelete);
         }
     }
 }

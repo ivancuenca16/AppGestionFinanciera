@@ -2,18 +2,35 @@
 <html>
 <head><meta charset="utf-8"><title>Estadísticas</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style> body{padding:16px;font-family:sans-serif;} canvas{width:100%;height:300px;} </style>
+    <style> body{padding:16px;font-family:sans-serif;text-align:center;} canvas{width:100%;max-width:400px;height:300px;margin:auto;} </style>
 </head>
 <body>
-<canvas id="pie"></canvas>
+<h4>Gráfico Circular - Últimos 7 dás</h4>
+<canvas id="pieChart"></canvas>
+<h4>Gráfico de Barras - Mensual</h4>
+<canvas id="barChart"></canvas>
 <script>
-    function renderStats() {
+    function renderCharts() {
       const raw = window.statsData.getStatsData();
-      const d   = JSON.parse(raw);
-      new Chart(document.getElementById('pie'), {
+      const data = JSON.parse(raw);
+
+      // Pie: últimos 7 días
+      new Chart(document.getElementById('pieChart'), {
         type:'pie',
-        data:{labels:['Ingresos','Gastos'],datasets:[{data:[d.sumIn,d.sumOut],backgroundColor:['#388E3C','#D32F2F']}]},
-        options:{responsive:true}
+        data:{ labels:['Ingresos','Gastos'],
+               datasets:[{ data:[data.sumIn7,data.sumOut7],
+                           backgroundColor:['#388E3C','#D32F2F'] }] },
+        options:{ responsive:true }
+      });
+
+      // Bar: ahorro Mar-Jun
+      new Chart(document.getElementById('barChart'), {
+        type:'bar',
+        data:{ labels:data.labels,
+               datasets:[{ label:'Ahorro mensual',
+                           data:data.savings,
+                           backgroundColor:'#1976D2' }] },
+        options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }
       });
     }
 </script>

@@ -8,24 +8,17 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Estadísticas"
             style="@style/TextAppearance.MaterialComponents.Headline6"
-            android:layout_marginBottom="12dp"/>
+            android:layout_marginBottom="24dp"/>
 
-        <!-- Selector de rango -->
-        <Spinner
-            android:id="@+id/spinnerRango"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:entries="@array/rango_estadisticas"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- WebView para Chart.js -->
+        <!-- Solo el WebView con el pie chart -->
         <WebView
             android:id="@+id/webviewStats"
             android:layout_width="match_parent"

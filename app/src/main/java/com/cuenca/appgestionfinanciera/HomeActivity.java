@@ -18,6 +18,7 @@ public class HomeActivity extends AppCompatActivity {
     private FragmentLista fragmentLista;
     private FragmentPeriodicos fragmentPeriodicos;
     private FragmentEstadisticas fragmentEstadisticas;
+    private FragmentCuenta fragmentCuenta;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +30,7 @@ public class HomeActivity extends AppCompatActivity {
         fragmentLista        = new FragmentLista();
         fragmentPeriodicos   = new FragmentPeriodicos();
         fragmentEstadisticas = new FragmentEstadisticas();
+        fragmentCuenta       = new FragmentCuenta();
 
         bottomNav = findViewById(R.id.bottom_navigation);
 
@@ -50,7 +52,9 @@ public class HomeActivity extends AppCompatActivity {
                 seleccionado = fragmentPeriodicos;
             } else if (id == R.id.nav_estadisticas) {
                 seleccionado = fragmentEstadisticas;
-            }
+            }     else if (id == R.id.nav_cuenta)
+                seleccionado = fragmentCuenta;
+
 
             if (seleccionado != null) {
                 fragmentManager.beginTransaction()
